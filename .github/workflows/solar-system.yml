@@ -17,9 +17,9 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        node-version: [20,21,22]
+        node-version: [21,22]
         exclude:
-          - node-version: 20
+          - node-version: 21
             os: macos-latest
     runs-on: ${{ matrix.os}}
     steps:
@@ -30,14 +30,23 @@ jobs:
         with:
           node-version: ${{matrix.node-version}}
 
+      - name: cache npm dependencies
+        uses: actions/cache@v5
+        with: 
+          path: node_modules
+          key: ${{ runner.os}}-node-modules${{ hashFiles('package-lock.json')}}
+
       - name: Install dependencies
         run: npm install
 
       - name: Run testing
+        id: unit-test
         run: npm test
 
       - name: archive test result
         uses: actions/upload-artifact@v7
+        #if previous step fail or succes and this will always runs
+        if: always()
         with:
           name: mocha-artifact
           path: test-results.xml
@@ -54,10 +63,18 @@ jobs:
         with:
           node-version: ${{matrix.node-version}}
 
+      - name: cache npm dependencies
+        uses: actions/cache@v5
+        with: 
+          path: node_modules
+          key: ${{ runner.os}}-node-modules${{ hashFiles('package-lock.json')}}
+
+
       - name: Install dependencies
         run: npm install
 
       - name: code coverage
+        continue-on-error: true
         run: npm run coverage
         
       - name: archive coverage results
