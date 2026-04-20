@@ -16,11 +16,11 @@ jobs:
     name: Unit testing
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]
         node-version: [21,22]
-        exclude:
-          - node-version: 21
-            os: macos-latest
+        # exclude:
+        #   - node-version: 21
+        #     os: macos-latest
     runs-on: ${{ matrix.os}}
     steps:
       - uses: actions/checkout@v5
@@ -34,7 +34,7 @@ jobs:
         uses: actions/cache@v5
         with: 
           path: node_modules
-          key: ${{ runner.os}}-node-modules${{ hashFiles('package-lock.json')}}
+          key: ${{ runner.os}}-node-modules-${{ hashFiles('package-lock.json')}}
 
       - name: Install dependencies
         run: npm install
@@ -67,7 +67,7 @@ jobs:
         uses: actions/cache@v5
         with: 
           path: node_modules
-          key: ${{ runner.os}}-node-modules${{ hashFiles('package-lock.json')}}
+          key: ${{ runner.os}}-node-modules-${{ hashFiles('package-lock.json')}}
 
 
       - name: Install dependencies
@@ -85,3 +85,22 @@ jobs:
           retention-days: 5
 
 
+  docker-login:
+    permissions:
+      packages: write
+      
+    runs-on: ubuntu-latest
+    needs: [unit-testing, code-coverage]
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{vars.DOCKERHUB_USERNAME}}/solar-system:${{ github.sha}}
